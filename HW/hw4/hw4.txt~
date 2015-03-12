@@ -1,0 +1,53 @@
+Q1
+a) 
+b) 
+c) 
+d)
+
+
+
+Q2
+a)
+b)
+
+
+
+Q3
+CurState	| Input	| NextState	| Output
+		| 	| 		| 
+		| 	| 		| 
+		| 	| 		| 
+		| 	| 		| 
+		| 	| 		| 
+		| 	| 		| 
+		| 	| 		|  
+//add more rows if necessary
+
+
+Q4
+a) 
+Out =
+
+Next1 =
+
+Next0 =
+
+b) hw4fsm.circ
+
+c)
+
+
+
+Q5
+a)
+
+b)
+Instruction | RegDst | ALUSrc | MemToReg | RegWrite | MemRead | MemWrite | Branch | //add more columns if necessary
+addu        | 1	     | 0      | 0	       | 1	      | 0	      | 0	       | 0	  |
+lw	        | 0	     | 1      | 1	       | 1	      | 1	      | 0	       | 0	  |
+sw	        | X	     | 1      | X	       | 0	      | 0	      | 1	       | 0	  |
+beq	        | X	     | 0      | X	       | 0	      | 0	      | 0	       | 1	  |
+j	          | 	     | 	      | 	       | 	        | 	      | 	       | 	  |
+sll         | 	     |        |		       | 	        | 	      | 	       | 	  |
+
+c)

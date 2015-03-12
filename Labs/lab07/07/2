@@ -1,0 +1,435 @@
+	.file	"sum.c"
+	.text
+	.type	RDTSC, @function
+RDTSC:
+.LFB493:
+	.cfi_startproc
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	pushq	%r12
+	pushq	%rbx
+#APP
+# 11 "sum.c" 1
+	rdtsc
+# 0 "" 2
+#NO_APP
+	movl	%edx, %ebx
+	.cfi_offset 3, -32
+	.cfi_offset 12, -24
+	movl	%eax, %r12d
+	movl	%r12d, -24(%rbp)
+	movl	%ebx, -20(%rbp)
+	movl	-24(%rbp), %eax
+	movl	-20(%rbp), %edx
+	salq	$32, %rdx
+	orq	%rdx, %rax
+	popq	%rbx
+	popq	%r12
+	popq	%rbp
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE493:
+	.size	RDTSC, .-RDTSC
+	.globl	sum_naive
+	.type	sum_naive, @function
+sum_naive:
+.LFB494:
+	.cfi_startproc
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	movl	%edi, -20(%rbp)
+	movq	%rsi, -32(%rbp)
+	movl	$0, -8(%rbp)
+	movl	$0, -4(%rbp)
+	jmp	.L3
+.L4:
+	movl	-4(%rbp), %eax
+	cltq
+	salq	$2, %rax
+	addq	-32(%rbp), %rax
+	movl	(%rax), %eax
+	addl	%eax, -8(%rbp)
+	addl	$1, -4(%rbp)
+.L3:
+	movl	-4(%rbp), %eax
+	cmpl	-20(%rbp), %eax
+	jl	.L4
+	movl	-8(%rbp), %eax
+	popq	%rbp
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE494:
+	.size	sum_naive, .-sum_naive
+	.globl	sum_unrolled
+	.type	sum_unrolled, @function
+sum_unrolled:
+.LFB495:
+	.cfi_startproc
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	movl	%edi, -20(%rbp)
+	movq	%rsi, -32(%rbp)
+	movl	$0, -12(%rbp)
+	movl	$0, -8(%rbp)
+	jmp	.L6
+.L7:
+	movl	-8(%rbp), %eax
+	cltq
+	salq	$2, %rax
+	addq	-32(%rbp), %rax
+	movl	(%rax), %eax
+	addl	%eax, -12(%rbp)
+	movl	-8(%rbp), %eax
+	cltq
+	addq	$1, %rax
+	salq	$2, %rax
+	addq	-32(%rbp), %rax
+	movl	(%rax), %eax
+	addl	%eax, -12(%rbp)
+	movl	-8(%rbp), %eax
+	cltq
+	addq	$2, %rax
+	salq	$2, %rax
+	addq	-32(%rbp), %rax
+	movl	(%rax), %eax
+	addl	%eax, -12(%rbp)
+	movl	-8(%rbp), %eax
+	cltq
+	addq	$3, %rax
+	salq	$2, %rax
+	addq	-32(%rbp), %rax
+	movl	(%rax), %eax
+	addl	%eax, -12(%rbp)
+	addl	$4, -8(%rbp)
+.L6:
+	movl	-20(%rbp), %eax
+	leal	3(%rax), %edx
+	testl	%eax, %eax
+	cmovs	%edx, %eax
+	sarl	$2, %eax
+	sall	$2, %eax
+	cmpl	-8(%rbp), %eax
+	jg	.L7
+	movl	-20(%rbp), %eax
+	leal	3(%rax), %edx
+	testl	%eax, %eax
+	cmovs	%edx, %eax
+	sarl	$2, %eax
+	sall	$2, %eax
+	movl	%eax, -4(%rbp)
+	jmp	.L8
+.L9:
+	movl	-4(%rbp), %eax
+	cltq
+	salq	$2, %rax
+	addq	-32(%rbp), %rax
+	movl	(%rax), %eax
+	addl	%eax, -12(%rbp)
+	addl	$1, -4(%rbp)
+.L8:
+	movl	-4(%rbp), %eax
+	cmpl	-20(%rbp), %eax
+	jl	.L9
+	movl	-12(%rbp), %eax
+	popq	%rbp
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE495:
+	.size	sum_unrolled, .-sum_unrolled
+	.globl	sum_vectorized
+	.type	sum_vectorized, @function
+sum_vectorized:
+.LFB496:
+	.cfi_startproc
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	subq	$40, %rsp
+	movl	%edi, -148(%rbp)
+	movq	%rsi, -160(%rbp)
+	pxor	%xmm0, %xmm0
+	movdqa	%xmm0, -96(%rbp)
+	movdqa	-96(%rbp), %xmm0
+	movdqa	%xmm0, -128(%rbp)
+	movl	$0, -8(%rbp)
+	jmp	.L11
+.L12:
+	movl	-8(%rbp), %eax
+	cltq
+	salq	$2, %rax
+	addq	-160(%rbp), %rax
+	movq	%rax, -24(%rbp)
+	movq	-24(%rbp), %rax
+	movdqu	(%rax), %xmm0
+	movdqa	%xmm0, -112(%rbp)
+	movdqa	-128(%rbp), %xmm0
+	movdqa	%xmm0, -80(%rbp)
+	movdqa	-112(%rbp), %xmm0
+	movdqa	%xmm0, -64(%rbp)
+	movdqa	-64(%rbp), %xmm0
+	movdqa	-80(%rbp), %xmm1
+	paddd	%xmm1, %xmm0
+	movdqa	%xmm0, -128(%rbp)
+	addl	$4, -8(%rbp)
+.L11:
+	movl	-148(%rbp), %eax
+	andl	$-4, %eax
+	cmpl	-8(%rbp), %eax
+	jg	.L12
+	leaq	-144(%rbp), %rax
+	movq	%rax, -16(%rbp)
+	movdqa	-128(%rbp), %xmm0
+	movdqa	%xmm0, -48(%rbp)
+	movdqa	-48(%rbp), %xmm0
+	movq	-16(%rbp), %rax
+	movdqu	%xmm0, (%rax)
+	movl	-144(%rbp), %edx
+	movl	-140(%rbp), %eax
+	addl	%eax, %edx
+	movl	-136(%rbp), %eax
+	addl	%eax, %edx
+	movl	-132(%rbp), %eax
+	addl	%edx, %eax
+	movl	%eax, -4(%rbp)
+	movl	-4(%rbp), %eax
+	leave
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE496:
+	.size	sum_vectorized, .-sum_vectorized
+	.globl	sum_vectorized_unrolled
+	.type	sum_vectorized_unrolled, @function
+sum_vectorized_unrolled:
+.LFB497:
+	.cfi_startproc
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	movl	%edi, -4(%rbp)
+	movq	%rsi, -16(%rbp)
+	movl	$0, %eax
+	popq	%rbp
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE497:
+	.size	sum_vectorized_unrolled, .-sum_vectorized_unrolled
+	.section	.rodata
+.LC2:
+	.string	"%20s: "
+.LC3:
+	.string	"%.2f microseconds\n"
+.LC4:
+	.string	"ERROR!"
+	.text
+	.globl	benchmark
+	.type	benchmark, @function
+benchmark:
+.LFB498:
+	.cfi_startproc
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	subq	$64, %rsp
+	movl	%edi, -36(%rbp)
+	movq	%rsi, -48(%rbp)
+	movq	%rdx, -56(%rbp)
+	movq	%rcx, -64(%rbp)
+	movq	-48(%rbp), %rdx
+	movl	-36(%rbp), %eax
+	movq	-56(%rbp), %rcx
+	movq	%rdx, %rsi
+	movl	%eax, %edi
+	call	*%rcx
+	movl	%eax, -4(%rbp)
+	call	RDTSC
+	movq	%rax, -24(%rbp)
+	movq	-48(%rbp), %rdx
+	movl	-36(%rbp), %eax
+	movq	-56(%rbp), %rcx
+	movq	%rdx, %rsi
+	movl	%eax, %edi
+	call	*%rcx
+	addl	%eax, -4(%rbp)
+	call	RDTSC
+	subq	-24(%rbp), %rax
+	movq	%rax, -24(%rbp)
+	movq	-24(%rbp), %rax
+	testq	%rax, %rax
+	js	.L15
+	cvtsi2sdq	%rax, %xmm0
+	jmp	.L16
+.L15:
+	movq	%rax, %rdx
+	shrq	%rdx
+	andl	$1, %eax
+	orq	%rax, %rdx
+	cvtsi2sdq	%rdx, %xmm0
+	addsd	%xmm0, %xmm0
+.L16:
+	movsd	.LC0(%rip), %xmm1
+	divsd	%xmm1, %xmm0
+	movsd	.LC1(%rip), %xmm1
+	mulsd	%xmm1, %xmm0
+	movsd	%xmm0, -16(%rbp)
+	movl	$.LC2, %eax
+	movq	-64(%rbp), %rdx
+	movq	%rdx, %rsi
+	movq	%rax, %rdi
+	movl	$0, %eax
+	call	printf
+	movq	-48(%rbp), %rdx
+	movl	-36(%rbp), %eax
+	movq	%rdx, %rsi
+	movl	%eax, %edi
+	call	sum_naive
+	addl	%eax, %eax
+	cmpl	-4(%rbp), %eax
+	jne	.L17
+	movl	$.LC3, %eax
+	movsd	-16(%rbp), %xmm0
+	movq	%rax, %rdi
+	movl	$1, %eax
+	call	printf
+	jmp	.L14
+.L17:
+	movl	$.LC4, %edi
+	call	puts
+.L14:
+	leave
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE498:
+	.size	benchmark, .-benchmark
+	.section	.rodata
+.LC5:
+	.string	"naive"
+.LC6:
+	.string	"unrolled"
+.LC7:
+	.string	"vectorized"
+.LC8:
+	.string	"vectorized unrolled"
+	.text
+	.globl	main
+	.type	main, @function
+main:
+.LFB499:
+	.cfi_startproc
+	pushq	%rbp
+	.cfi_def_cfa_offset 16
+	.cfi_offset 6, -16
+	movq	%rsp, %rbp
+	.cfi_def_cfa_register 6
+	pushq	%rbx
+	subq	$72, %rsp
+	movl	%edi, -52(%rbp)
+	movq	%rsi, -64(%rbp)
+	movq	%rsp, %rax
+	movq	%rax, %rbx
+	.cfi_offset 3, -24
+	movl	$7777, -20(%rbp)
+	movl	$0, %edi
+	call	time
+	movq	%rax, %rdi
+	movl	$0, %eax
+	call	srand48
+	movl	-20(%rbp), %eax
+	cltq
+	subq	$1, %rax
+	movq	%rax, -40(%rbp)
+	movl	-20(%rbp), %eax
+	cltq
+	salq	$2, %rax
+	leaq	15(%rax), %rdx
+	movl	$16, %eax
+	subq	$1, %rax
+	addq	%rdx, %rax
+	movq	$16, -72(%rbp)
+	movl	$0, %edx
+	divq	-72(%rbp)
+	imulq	$16, %rax, %rax
+	subq	%rax, %rsp
+	movq	%rsp, %rax
+	addq	$15, %rax
+	shrq	$4, %rax
+	salq	$4, %rax
+	movq	%rax, -32(%rbp)
+	movl	$0, -24(%rbp)
+	jmp	.L20
+.L21:
+	movl	$0, %eax
+	call	lrand48
+	movq	-32(%rbp), %rdx
+	movl	-24(%rbp), %ecx
+	movslq	%ecx, %rcx
+	movl	%eax, (%rdx,%rcx,4)
+	addl	$1, -24(%rbp)
+.L20:
+	movl	-24(%rbp), %eax
+	cmpl	-20(%rbp), %eax
+	jl	.L21
+	movq	-32(%rbp), %rsi
+	movl	-20(%rbp), %eax
+	movl	$.LC5, %ecx
+	movl	$sum_naive, %edx
+	movl	%eax, %edi
+	call	benchmark
+	movq	-32(%rbp), %rsi
+	movl	-20(%rbp), %eax
+	movl	$.LC6, %ecx
+	movl	$sum_unrolled, %edx
+	movl	%eax, %edi
+	call	benchmark
+	movq	-32(%rbp), %rsi
+	movl	-20(%rbp), %eax
+	movl	$.LC7, %ecx
+	movl	$sum_vectorized, %edx
+	movl	%eax, %edi
+	call	benchmark
+	movq	-32(%rbp), %rsi
+	movl	-20(%rbp), %eax
+	movl	$.LC8, %ecx
+	movl	$sum_vectorized_unrolled, %edx
+	movl	%eax, %edi
+	call	benchmark
+	movl	$0, %eax
+	movq	%rbx, %rsp
+	movq	-8(%rbp), %rbx
+	leave
+	.cfi_def_cfa 7, 8
+	ret
+	.cfi_endproc
+.LFE499:
+	.size	main, .-main
+	.section	.rodata
+	.align 8
+.LC0:
+	.long	2684354560
+	.long	1105254043
+	.align 8
+.LC1:
+	.long	0
+	.long	1093567616
+	.ident	"GCC: (Ubuntu/Linaro 4.6.3-1ubuntu5) 4.6.3"
+	.section	.note.GNU-stack,"",@progbits

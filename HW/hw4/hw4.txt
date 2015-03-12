@@ -1,0 +1,52 @@
+Q1
+a) 2
+b) 1
+c) 10 ns, 130 ns, 250ns
+d) 130 ns, 250 ns
+
+Q2
+ a) The accumulator should work. The clock frequency is 50MHz, so one clock period is 20ns. X_i and 
+ Y_i update 1ns after every clock rise edge. It takes 8ns in total for the result to propagate to 
+ S_i. The setup time is 2ns. So the S_i is stable for long enough for the S_i to properly pass to S_
+ (i-1). So total delay is 11 ns which less than 20ns. The critical path is (maximum delay) = 4ns + 
+ 4ns + 2ns + 1ns = 11 ns
+
+b) If the clock rate is doubled, then the one clock period is 10ns. In order for the circuit to 
+work, we need to add one register at the output of the first adder.
+
+So we have an adder that takes in the X-i and Y-i as inputs and after that have a register that 
+remembers it. Then after that, have an adder that take the output from that register and the second 
+input takes in the feeback from a register which take in the output of this adder.
+So that adder spits out S_i and the register that remember that value which becomes S_i-1 and that 
+S_i-1 is the second input (the feedback) for the second adder circuit.
+
+
+
+Q3
+The base is Seen0
+CurState|	| Input	| NextState	| Output
+ Seen0	| 	| 	0	|	Seen0	|	0 
+ Seen0	| 	| 	1	| 	Seen1	|	0
+ Seen1	| 	| 	0	| 	Seen10	|   1
+ Seen1	| 	| 	1	|   Seen1   |   0
+ Seen10	| 	| 	0	|   Seen10  |   1
+ Seen10	| 	| 	1	|   Seen10  |   1
+		| 	| 		|  
+//add more rows if necessary
+
+
+Q4
+a) 
+Out = s0*s1*Input
+
+Next1 = (~s0)*(Input)
+
+Next0 = (Input)
+
+b) retval = (state & 1) && (state & 2) && x;
+   state  = ((~(state & 1)  && x) << 1) | x;
+
+
+Q5) x0+x1+x2+x3 + ((!x4)*(x5))
+	
+

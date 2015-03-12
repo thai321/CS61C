@@ -1,0 +1,13 @@
+Partner 1 name:
+Partner 1 login:
+Partner 2 name:
+Partner 2 login:
+
+CS61C Spring 2014 Project 1-2 Task A Writeup
+
+1. Which version (iterative or recursive) executed more instructions, and why? Please answer in 1-2 sentences.
+
+
+
+
+
