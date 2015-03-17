@@ -1,0 +1,38 @@
+		ADD %sp, %sp, 100
+		COPY %a0, 5
+		CALL @fact
+		HALT
+
+fact:
+ 	
+	CMPS %a0, 1	# if i < 2 (i.e i == 1)
+	JUMP ?NE, @cont	# if i >= 2 go to cont
+	COPY %rv, 1	# else make the resturn value 1
+ 
+	JUMP %ra
+ 
+ 
+cont:
+ 
+	# OPERATION 1: save into stack
+ 
+	PUSH %ra
+	PUSH %a0
+ 
+	# OPERATION 2: compute fact(n - 1)
+ 
+	ADD %a0, %a0, -1
+	CALL @fact
+ 
+	# OPERATION 3: restore from stack
+ 
+ 	POP %a0
+ 	POP %ra
+	
+	# OPERATION 4: finally n * fact(n - 1)
+ 
+	ADD %rv, %a0, %rv		# multiply n * fib(n - 1)
+ 
+	JUMP %ra
+
+		

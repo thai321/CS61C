@@ -1,0 +1,554 @@
+
+<html>
+  
+<!-- Mirrored from www-inst.eecs.berkeley.edu/~cs61c/sp14/projs/04/ by HTTrack Website Copier/3.x [XR&CO'2014], Tue, 17 Mar 2015 00:03:56 GMT -->
+<head>
+    <title>Project 4: Processor Design</title>
+    
+  <style type="text/css">
+    html {background:#060053;color:#000;text-align:justify;font-family:lucida grande,sans-serif;font-size:12pt;}
+    body {margin:0;}
+    div.header {padding:2em;}
+    div.header * {color:#eee !important;}
+    
+    table {border-collapse:collapse;}
+    table, pre.code {font-family:monospace;}
+    td {vertical-align:top;}
+    tr, pre.code {background-color:#cdc;}
+    td, pre.code {padding:0.75em;}
+    thead td, td.head {background-color:#000;color:#fff;}
+    tr:nth-of-type(even) {background:#ded;}
+    h2 {color:#050;}
+    h3 {color:#080;}
+    
+    td, pre.code, img {border:1px solid #232;}
+    pre.code, img {border-style:dotted;}
+    
+    pre.code.input:before {content:"$ ";color:#808;}
+    pre.code.input {color:#008;}
+    
+    td>pre.code {background:none;border:none;padding:0;}
+    
+    code.int {color:#870;}
+    code.reg {color:#900;}
+    code.cmr {color:#090;}
+    code.imm {color:#009;}
+    
+    td.b1 {width:1em;}
+    td.b3 {width:3em;}
+    td.b4 {width:4em;}
+    td.b5 {width:5em;}
+    td.b8 {width:8em;}
+    td.b9 {width:9em;}
+    td.b12 {width:12em;}
+    td.b16 {width:16em;}
+    td.b20 {width:20em;}
+    td.b24 {width:24em;}
+    
+    table {counter-reset:tline -1;}
+    td.or:after {counter-increment:tline;content:counter(tline);}
+    
+    .testing {color:#f00;}
+    
+    .sect {background-color:#eee;padding:1em;margin:1em;outline:0.3em solid #000;}    
+    .sect>*:first-child {margin-top:0;}    
+    .sect>*:last-child {margin-bottom:0;}  
+    
+    .critical * {color:red;}  
+  </style>
+
+  </head>
+  <body>
+    <div class="header">
+      <h1>Project 4: Processor Design</h1>
+      <h3>CS61C Spring 2014</h3>
+      <h3>Due Sunday, May 4th, 2014 @ 23:59:59</h3>
+    </div>
+    <div class="content">
+  
+
+  <div class="sect">
+    <h2>Updates</h2>
+    <ul class="critical">
+      <li>The original <tt>RUN.circ</tt> was updated on Thursday April 24 at 12:15 PM. If 
+      		you copied this file before then, please retrieve it again (the old version had 
+      		a pointless MUX that broke the circuit).</li>
+    </ul>
+	</div>
+    
+  <div class="sect">
+    <h2>Overview</h2>
+    
+
+<p>In this project, you will be implementing a 2-stage pipelined processor for the Ida 
+  assembly language (a language designed specifically for this project!). It is 
+  absolutely necessary to thoroughly read through the <a href="manual.html">Ida Manual</a> to be able to complete 
+  this project, as there are substantial differences (both simplifications and 
+  complications) from MIPS.</p>
+  
+<p>Before you begin, some points to consider:</p>
+
+<ul>
+  <li>It is absolutely critical not to move the input or output pins in any of the 
+    supplied circuit files.</li>
+  <li>You may use any built in components supplied in Logisim, EXCEPT for the built in
+  clock pin (instead use the clock signal given as an input to the circuit).</li>
+  <li>Make sure you are familiar with the subtleties explained in the <a href="manual.html">Ida Manual</a>. For 
+  example: When does sign extension happen? What do comparison queries return before a 
+  comparison has occurred?</li>
+</ul>
+
+
+  </div>
+
+
+
+  <div class="sect">
+    <h2>Getting Started</h2>
+    
+
+<p>For this project, you should work in groups of two (however, you may work solo). 
+You are not allowed to show or share your project files with any other students, friends, 
+and such. This includes files you write for testing.</p>
+
+<p>As usual, note that looking at solutions from previous semesters is also strictly 
+prohibited. We have various tools at our disposal to detect plagiarism and they are very 
+good at what they do.</p>
+
+
+  </div>
+
+
+
+  <div class="sect">
+    <h2>Files</h2>
+    
+
+<p>Before you begin, copy the start kit to your project 4 directory:</p>
+  
+<pre class="code input">cp -r ~cs61c/proj/04/* proj04</pre>
+
+<p>The following files are given:</p>
+
+<ul>
+  <li><b>RUN.circ</b> - contains instruction memory and runs your project; DO NOT MODIFY</li>
+  <li><b>REG.circ</b> - contains all general purpose registers</li>
+  <li><b>CPU.circ</b> - contains most of the processor, excluding instruction memory.</li>
+  <li><b>ALU.circ</b> - performs arithmetic operations</li>
+  <li><b>QUESTIONS</b> - contains some questions for you to answer</li>
+  <li><b>hex/</b> - contains testing tools</li>
+</ul>
+
+  </div>
+
+
+
+
+  <div class="sect">
+    <h2>Pipelining</h2>
+    
+
+<p>You will be implementing a 2-stage pipeline, specifically including the following stages:</p>
+<ol>
+  <li><b>Instruction Fetch</b> - fetch an instruction from instruction memory</li>
+  <li><b>Decode</b> - everything else (decode and execute the instruction, then write back the results)</li>
+</ol>
+
+<p>Note that data hazards are not present in this design, since every data access from 
+any source occurs only in one pipeline stage. However, control hazards must still be 
+accounted for. Ida does not expose branch delay slots to software. In other words, the 
+instruction immediately after a jump is not necessarily executed if the jump actually 
+occurs. By the time you have figured out that a jump is in the execute stage, you have 
+already accessed the instruction memory and possibly pulled out the wrong instruction. 
+Thus you will need to "kill" the instruction being fetched if the instruction currently 
+being executed is a taken jump (which is to say that jumps that are not taken should 
+not cause a kill).</p>
+
+<p>Instruction kills for this project MUST be accomplished by MUXing a nop into the 
+instruction stream and sending the nop into the execute stage (instead of using the 
+fetched instruction). Notice that every Ida instruction contains numerous possible nops 
+(every instruction can be turned into a nop using the ?NO comparison query). However, 
+you MUST use 0x00000000 as a nop, for grading purposes.</p>
+
+<p>Because all of the control and execution is handled in the Execute stage, your 
+processor should be more or less indistinguishable from a single-cycle implementation, 
+barring the one-cycle startup latency and the jump delays. However, we will be enforcing 
+the two-pipeline design. If you are unsure about pipelining, it is perfectly fine 
+(and even recommended) to first implement a single-cycle processor. This will allow 
+you to first verify that your instruction decoding, control signals, arithmetic 
+operations, and memory accesses are all working properly. From a single-cycle processor, 
+you can then split off the instruction fetch stage with a few additions and a few 
+logical tweaks.</p>
+
+<p>You might also notice a bootstrapping problem here: during the first cycle, the 
+instruction register sitting between the pipeline stages won't contain an instruction 
+loaded from memory. How do we deal with this? It happens that Logisim automatically sets 
+registers to zero on reset. The instruction register will then contain a nop. We will 
+allow you to depend on this behavior of Logisim (which is required as specified in 
+the <a href="manual.html">Ida Manual</a>).</p>
+
+  </div>
+
+
+
+
+  <div class="sect">
+    <h2>Starting Circuit Files</h2>
+    
+  <h3>Layout</h3>
+  <p>The general layout of the skeleton files is demonstrated with the ALU skeleton file 
+  shown here.</p>
+  <p><img src="info.png"/></p>
+  <p>In this example, the top row contains the actual input and output pins. These must 
+  not be moved or changed under any circumstances! Connect to these pins using tunnels.
+  Each file also has a helpful group of display probes, which merely display the inputs 
+  and outputs in a more readable format. These probes can be ignored, moved, or changed 
+  as desired.</p>
+  
+
+
+
+
+
+<h3>REG.circ</h3>
+
+<p>
+	  You will design a register file to manage the sixteen 24-bit registers in Ida. After 
+	  being told to write data to a particular register, you will be able to retrieve that 
+	  data by asking for the value of that register on subsequent clock cycles. 
+	</p>
+
+<p>Note:</p>
+<ul>
+
+	  <li>There is a third register value output, unlike in MIPS. You will have to figure out 
+	  which instructions require reading the values of three registers.</li>
+	  <li>Be sure to review the register table in the <a href="manual.html">Ida Manual</a> for any special cases.</li>
+	
+</ul>
+
+<p>
+  <table><thead>
+    <tr>
+      <td>Input</td>
+      <td>Description</td>
+    </tr>
+  </thead><tbody>
+		<tr><td>reg1Read</td><td>the first register to read from</td></tr>
+		<tr><td>reg2Read</td><td>the second register to read from</td></tr>
+		<tr><td>reg3Write</td><td>the register to write to, which is also the third register to read from</td></tr>
+		<tr><td>writeVal</td><td>the value to write to the specified register</td></tr>
+		<tr><td>write?</td><td>enables writing to the register</td></tr>
+		<tr><td>clk</td><td>the clock pulse</td></tr>
+	</tbody></table>
+</p>
+<p>
+  <table><thead>
+    <tr>
+      <td>Output</td>
+      <td>Description</td>
+    </tr>
+  </thead><tbody>
+		<tr><td>reg1Val</td><td>the first read register value</td></tr>
+		<tr><td>reg2Val</td><td>the second read register value</td></tr>
+		<tr><td>reg3Val</td><td>the third read register value</td></tr>
+		<tr><td>R00 - R15</td><td>all the register values; used for debugging and grading only</td></tr>
+  </tbody></table>
+</p>
+
+<p>WARNING: BE CERTAIN NOT TO CHANGE OR MOVE THE INPUT OR OUTPUT PINS OF THIS 
+CIRCUIT!</p>
+
+
+  
+
+
+<h3>ALU.circ</h3>
+
+<p>		
+		You will also design an ALU that your processor will use to do math. You will tell 
+		your ALU what operation to perform, and it will drive its output with the result of 
+		that operation.
+	</p>
+
+<p>Note:</p>
+<ul>
+
+	  <li>You are allowed to use ANY of Logisim's built-in arithmetic blocks.</li>
+	  <li>The two comparison operations are implementation-dependent (you can 
+		output any value that works for you), and while they may return fewer than 24 bits, 
+		the ALU will still output a 24 bit quantity as always. Review the <a href="manual.html">Ida Manual</a> for 
+		details.</li>
+		<li>You cannot store any comparison checking in the ALU, because there is no clock 
+		input. Including a clock pin in the ALU is not allowed.</li>
+		<li>Unlike the ALUs we've studied in the past, this ALU does not have an ALU control 
+		input. Instead it takes in the instruction's operation number. The reason for this is 
+		that there are 12 unique arithmetic operations in Ida, requiring 4 bits to be 
+		passed along in an ALU control signal. Since the operation field is also 4 bits, it 
+		is simpler to pass this into the ALU instead.</li>
+	
+</ul>
+
+<p>
+  <table><thead>
+    <tr>
+      <td>Input</td>
+      <td>Description</td>
+    </tr>
+  </thead><tbody>
+		<tr><td>s1</td><td>the first ALU operand</td></tr>
+		<tr><td>s2</td><td>the second ALU operand</td></tr>
+		<tr><td>operation</td><td>the operation number that identifies which instruction is being 
+		executed (for operations that do not use the ALU, output 0)
+		
+		<ol start="0">
+			<li>Shift Left Logical</li>
+                        <li>Shift Right Logical</li>
+                        <li>Shift Right Arithmetic</li>
+                        <li>Rotate Left</li>
+                        <li>Rotate Right</li>
+                        <li>And</li>
+                        <li>Inclusive Or</li>
+                        <li>Exclusive Or</li>
+                        <li>Addition</li>
+                        <li>Subtraction</li>
+                        <li>Addition</li>
+                        <li>Addition</li>
+                        <li>Some Sort of Signed Comparison</li>
+                        <li>Some Sort of Unsigned Comparison</li>
+                        <li>0</li>
+			<li>0</li>
+		</ol>		
+
+		</td></tr>
+	</tbody></table>
+</p>
+<p>
+  <table><thead>
+    <tr>
+      <td>Output</td>
+      <td>Description</td>
+    </tr>
+  </thead><tbody>
+		<tr><td>result</td><td>the result of the selected operation</td></tr>
+  </tbody></table>
+</p>
+
+<p>WARNING: BE CERTAIN NOT TO CHANGE OR MOVE THE INPUT OR OUTPUT PINS OF THIS 
+CIRCUIT!</p>
+
+
+  
+  
+
+
+<h3>CPU.circ</h3>
+
+<p>
+		The CPU contains most of the processor, excluding instruction memory. The reason
+		for this involves testing concerns. There are several things to note here:
+  </p>
+
+<p>Note:</p>
+<ul>
+
+    <li>You will have to store the comparison register and the program counter register 
+    in this file, and implement it in whichever way you choose.</li>
+    <li>Most of the control signals you might use are the same as the MIPS control 
+    signals we've studied. However, the choosable register/immediate field described in 
+    the <a href="manual.html">Ida Manual</a> will complicate several of these signals.</li>
+    <li>Hint: design your control logic carefully. What might happen to your control 
+    signals when the comparison query is false?</li>
+    <li>You will need to implement data memory here.</li>
+	
+</ul>
+
+<p>
+  <table><thead>
+    <tr>
+      <td>Input</td>
+      <td>Description</td>
+    </tr>
+  </thead><tbody>
+		<tr><td>inst</td><td>the next encoded instruction to execute</td></tr>
+		<tr><td>clk</td><td>the clock pulse</td></tr>
+	</tbody></table>
+</p>
+<p>
+  <table><thead>
+    <tr>
+      <td>Output</td>
+      <td>Description</td>
+    </tr>
+  </thead><tbody>
+		<tr><td>nextPC</td><td>the next program counter to use</td></tr>
+		<tr><td>memData</td><td>the data that is being written into memory if memory writing is 
+		active, or garbage otherwise; used for debugging and grading only</td></tr>
+		<tr><td>memAddr</td><td>the address that would be written to in memory if memory writing is
+		active, or garbage otherwise; used for debugging and grading only</td></tr>
+		<tr><td>memWrite?</td><td>whether writing to memory is enabled; used for debugging and 
+		grading only</td></tr>
+		<tr><td>R00 - R15</td><td>all the register values; used for debugging and grading only</td></tr>	
+  </tbody></table>
+</p>
+
+<p>WARNING: BE CERTAIN NOT TO CHANGE OR MOVE THE INPUT OR OUTPUT PINS OF THIS 
+CIRCUIT!</p>
+
+
+  
+  
+
+<h3>RUN.circ</h3>
+
+<p>
+	  This test harness contains the remainder of the CPU logic, and is used to run the 
+	  processor. Since you will not submit this file, any changes you make will not be 
+	  graded.
+	</p>
+
+
+
+
+  </div>
+
+
+
+  <div class="sect">
+    <h2>Questions</h2>
+    
+  <p>The provided QUESTIONS file contains a few short questions for you to answer. They 
+  are also listed here for reference. Please answer them within the QUESTIONS file.</p>
+  <ol>
+    <li>Briefly explain how you implemented comparison queries and how they affected your 
+        control block's signals (in a few sentences).</li>
+    <li>Please list your control block's control signals, and briefly explain what each 
+        one does (in a sentence or less each).</li>
+    <li>What features (if any) of this assembly language do you like?</li>
+    <li>What features (if any) of this assembly language do you not like?</li>  
+  </ol>
+
+  </div>
+
+
+
+  <div class="sect">
+    <h2>Logisim Notes</h2>
+    
+
+<p>It is strongly recommended that you 
+<a href="http://ozark.hendrix.edu/~burch/logisim/">download Logisim</a> and to run on 
+your local machine while developing your processor to avoid overwhelming the 
+instructional machines. Though Logisim is relatively stable, it is still recommended 
+that you save often, and also make backup copies of your .circ files early and often. 
+The official version of Logisim we will be using for evaluation is v2.7.1.<p>
+
+<p>Some Helpful Hints:</p>
+<ul>
+  <li>If you are having trouble with Logisim (especially involving blue wires), be
+  sure to restart Logisim and reload your circuit! Don't waste your time chasing a bug 
+  that is not your fault. However, if restarting doesn't solve the problem, it is more 
+  likely that the bug is a flaw in your project.</li>
+  <li>Do NOT gate the clock! This is very bad design practice when making real circuits, 
+  so we will discourage you from doing this by heavily penalizing your project if you 
+  gate your clock.</li>
+  <li>BE CAREFUL with copying and pasting from different Logisim windows. Logisim has 
+  been known to have trouble with this in the past.</li>
+  <li>Changing attributes before placing a component changes the default settings for 
+  that component. So if you are about to place many 16-bit pins, this might be 
+  desirable. If you only want to change that particular component, place it first before 
+  changing the attributes.</li>
+  <li>When you change the inputs and outputs of a sub-circuit that you have already 
+  placed in an outer circuit, Logisim will automatically add and remove the changed ports 
+  when you return to outer circuit, and this sometimes shifts the block itself. If there 
+  were wires attached, Logisim will do its automatic moving of these as well, which can 
+  be extremely dumb in some cases. Before you change the inputs and outputs of a block, 
+  it can sometimes be easier to first disconnect all wires from it.</li>
+  <li>Error signals (red wires) are obviously bad, but they tend to appear in 
+  complicated wiring jobs such as the one you will be implementing here. It's good to be 
+  aware of the common causes while debugging:<br><br><img src="error_wire.png"></li>
+</ul>
+
+  </div>
+
+
+  
+
+  <div class="sect">
+    <h2>Testing</h2>
+    
+
+<p>Once you've implemented your processor, you can test its correctness by writing
+programs to run on it! This simple program has been provided for you as a basic 
+sanity check: <tt>halt.ida</tt>. This program loads the values 1-15 into registers 1-15,
+and then attempts to "halt" by performing an infinite loop. If it fails to halt 
+(for example, due to an error in your jump computation), it will then set all 
+registers to 0.</p>
+
+<p>See the <a href="manual.html">Ida Manual</a> to review how the assembler and emulator works.</p>
+
+<p>After the hex files have been assembled (and hopefully run through the emulator), 
+they can be loaded into a logisim RAM unit. Loading a hex file should be done before 
+running a simulation normally.</p>
+
+<p><img src="load_hex.png"/></p>
+
+<p>Please note that you are EXPECTED to fully test your circuit as this is the ONLY way 
+for you to know if you completed everything correctly. Also note that in the event the 
+emulator differs from the behavior defined in the <a href="manual.html">Ida Manual</a>, you should assume the 
+manual is correct.</p>
+
+
+
+  </div>
+
+
+
+
+
+  <div class="sect">
+    <h2>Submission</h2>
+    
+
+<p>Make sure to fill out the questions in the QUESTIONS file before submitting.</p>
+
+<p>You must submit only the following files:</p>
+
+<ul>
+  <li>REG.circ</li>
+  <li>ALU.circ</li>
+  <li>CPU.circ</li>
+  <li>QUESTIONS</li>
+</ul>
+
+<p>Again, this means that none of your circuits may use other external circuits. Submit 
+in the usual way:</p>
+
+<pre class="code input">submit proj4</pre>
+
+<p>This project is due in its entirety on Sunday, May 4th, 2014 at 23:59:59.</p>
+
+
+  </div>
+
+
+  
+
+  <div class="sect">
+    <h2>Grading</h2>
+    
+<p>This project will be graded in large part by an autograder. Readers will also glance 
+at your circuits. If some of your tests fail the readers will look to see if there is a 
+simple wiring problem. If they can find one they will give you the new score from the 
+autograder minus a deduction based on the severity of the wiring problem. For this reason 
+and as neatness is a small part of your grade please try to make your circuits neat and 
+readable.</p>
+
+  </div>
+
+  
+</div>
+  </body>
+
+<!-- Mirrored from www-inst.eecs.berkeley.edu/~cs61c/sp14/projs/04/ by HTTrack Website Copier/3.x [XR&CO'2014], Tue, 17 Mar 2015 00:03:56 GMT -->
+</html>

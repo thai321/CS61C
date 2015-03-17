@@ -1,0 +1,13 @@
+
+
+			ADD %t0, %zero, 0     # 0
+			CALL @Counter
+			ADD %t0, %t0, 1		# 2
+			SLL %t0, %t0, %t0
+			SLR %t0, %t0, 1
+			JUMP @third
+Counter:	
+			ADD %t0, %t0, %t0		# 1
+			JUMP %ra
+
+third:		SUB %t0, %t0, 1     # 3

@@ -1,0 +1,32 @@
+PROJECT 4 WRITE-UP
+------------------
+
+1) Briefly explain how you implemented comparison queries and how they affected your control block's signals (in a few sentences).
+
+If the result is greater, CR is set to 1.
+If the result is equals, CR is set to 2.
+If the result is less, CR is set to 3.
+Otherwise, it's initially 0.
+
+CQControl sub-circuit determines whether the instruction should be executed by comparing ?CQ with ?CR.
+
+LessOrEqual and GreaterOrEqual values are determined by using OR gate on CR value. Then all values except FALSE are OR-ed together. If it's FALSE then it will output 0 either way. Then the result is AND-ed with "start" to see if any comparison has been ever done.  
+
+2) Please list your control block's control signals, and briefly explain what each one does (in a sentence or less each).
+
+
+A2-type - determines whether the instruction is A2-type
+RegWrite - determines whether to write to register.
+MemWrite - determines whether to write to memory.
+Jump - determines whether it's a JUMP instruction.
+Link - determines whether it's a LINK instruction.
+JumpReg - determines whether it's a JUMP instruction and it's not and ?IMM is False.
+
+3) What features (if any) of this assembly language do you like?
+
+Comparison is awesome!! <3 <3 <3 #yolo #swag
+
+4) What features (if any) of this assembly language do you not like?
+
+Too easy to implement. Should add floating point unit and parallelization. 
+

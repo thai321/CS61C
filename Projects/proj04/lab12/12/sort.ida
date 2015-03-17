@@ -1,0 +1,42 @@
+        COPY %a0 0    # pointer to the 1st element
+        COPY %a1 1000 # number of elements to sort
+        ADD ?EQ %a1, %a1, %a1
+        CALL @SORT  
+        HALT
+        
+SORT:                 # sort starts here
+
+
+	do:
+		ADD %t0, %zero, 0  # bool swapped  = False
+		ADD %t1, %zero, 0 #  int i = 0
+	loop:
+		ADD %t1, %t1, 1 #  i++
+		ADD %t1, %t1, 1
+		CMPS %t1 %a1     # i vs n
+		JUMP ?GT @end_loop    # !(i < n) --> end_loop
+		SUB %t1, %t1, 1
+		SUB %t2, %t1, 1  # t2 = i - 1
+		LOAD %t3, %a0, %t2  # t3 = A[i-1] = A[t2]
+		LOAD %t5, %a0, %t1 # t5 = A[i]
+		CMPS %t3 %t5     # A[i-1] vs A[i]	
+		JUMP ?LT @loop
+	
+	swap: 
+		SAVE %t3, %a0 , %t1
+		SAVE %t5, %a0 , %t2
+		ADD %t0, %zero, 1
+		JUMP @loop	
+
+	end_loop:
+		CMPS %t0 %zero  # swapped vs False   
+		JUMP ?NE @do    # swapped is True --> do 
+
+	JUMP %ra
+
+
+
+
+
+
+

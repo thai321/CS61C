@@ -1,0 +1,39 @@
+		ADD %sp, %sp, 100
+		COPY %a0, 5
+		CALL @fact
+
+fact:
+ 	
+	CMPS %t0, %a0, 2	# if i < 2 (i.e i == 1)
+	JUMP ?EQ, @cont	# if i >= 2 go to cont
+	ADD %v0, %zero, 1	# else make the resturn value 1
+ 
+	JUMP %ra
+ 
+ 
+cont:
+ 
+	# OPERATION 1: save into stack
+ 
+	SUB %sp, %sp, 2	# make space in the stack
+	SAVE %ra, %sp, 0		# save the return address
+	SAVE %a0, %sp, 1		# save the argument value
+ 
+	# OPERATION 2: compute fact(n - 1)
+ 
+	ADD %a0, %a0, -1
+	CALL @fact
+ 
+	# OPERATION 3: restore from stack
+ 
+	LOAD %ra, %sp, 0		# get old return address from stack
+	LOAD %a0, %sp, 1		# get old argument value from stack
+	ADD %sp, %sp, 2	# return stack pointer to original value, thus erasing all values
+ 
+	# OPERATION 4: finally n * fact(n - 1)
+ 
+	ADD %v0, %a0, 1		# multiply n * fib(n - 1)
+ 
+	JUMP %ra
+
+		

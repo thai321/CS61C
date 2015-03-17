@@ -1,0 +1,467 @@
+
+<html>
+  
+<!-- Mirrored from www-inst.eecs.berkeley.edu/~cs61c/sp14/projs/04/manual.html by HTTrack Website Copier/3.x [XR&CO'2014], Tue, 17 Mar 2015 00:03:57 GMT -->
+<head>
+    <title>Ida Manual</title>
+    
+  <style type="text/css">
+    html {background:#060053;color:#000;text-align:justify;font-family:lucida grande,sans-serif;font-size:12pt;}
+    body {margin:0;}
+    div.header {padding:2em;}
+    div.header * {color:#eee !important;}
+    div.header, div.content {;}
+    
+    table {border-collapse:collapse;}
+    table, pre.code {font-family:monospace;}
+    td {vertical-align:top;}
+    tr, pre.code {background-color:#cdc;}
+    td, pre.code {padding:0.75em;}
+    thead td, td.head {background-color:#000;color:#fff;}
+    tr:nth-of-type(even) {background:#ded;}
+    h2 {color:#050;}
+    h3 {color:#080;}
+    
+    td, pre.code, img {border:1px solid #232;}
+    pre.code, img {border-style:dotted;}
+    
+    pre.code.input:before {content:"$ ";color:#808;}
+    pre.code.input {color:#008;}
+    
+    td>pre.code {background:none;border:none;padding:0;}
+    
+    code.int {color:#870;}
+    code.reg {color:#900;}
+    code.cmr {color:#090;}
+    code.imm {color:#009;}
+    
+    td.b1 {width:1em;}
+    td.b3 {width:3em;}
+    td.b4 {width:4em;}
+    td.b5 {width:5em;}
+    td.b8 {width:8em;}
+    td.b9 {width:9em;}
+    td.b12 {width:12em;}
+    td.b16 {width:16em;}
+    td.b20 {width:20em;}
+    td.b24 {width:24em;}
+    
+    table {counter-reset:tline -1;}
+    td.or:after {counter-increment:tline;content:counter(tline);}
+    
+    .testing {color:#f00;}
+    
+    .sect {background-color:#eee;padding:1em;margin:1em;outline:0.3em solid #000;}    
+    .sect>*:first-child {margin-top:0;}    
+    .sect>*:last-child {margin-bottom:0;}    
+  </style>
+
+  </head>
+  <body>
+    <div class="header"><h1>Ida Manual</h1></div>
+    <div class="content">
+
+  
+  
+  
+
+  <div class="sect">
+    <h2>Introduction</h2>
+    
+<p>
+  Ida is a 32-bit instruction set using a 24-bit address space. Ida Features a 
+  comparison slot in all instructions, and a field used either for registers or 
+  immediate values. For example, here is a logical left shift of <code class="reg">%t3</code> by 8 bits 
+  into <code class="reg">%t1</code>, only executing if the two argument registers are equal.
+</p>
+  
+  <pre class="code"><code class="int">CMPS</code> <code class="reg">%a0</code> <code class="reg">%a1</code>
+<code class="int">SLL</code> <code class="cmr">?EQ</code> <code class="reg">%t1</code> <code class="reg">%t3</code> 8</pre>
+
+<p>
+  Exactly how and why this works is explained in this manual.
+</p>
+
+
+  </div>
+
+
+
+
+  <div class="sect">
+    <h2>Bit Widths & Memory</h2>
+    
+<p>
+  Memory is divided into separate instruction and data memory segments, each of which 
+  has its own 24-bit address space. Instruction memory is aligned to 32-bit values, whereas 
+  data memory is aligned to 24-bit values. That is to say that instruction memory features 
+  32-bit words and data memory features 24-bit words. In both cases, memory is addressed by 
+  its respective word size (as opposed to single byte addressing). This means that 
+  each 24-bit memory address corresponds to a specific 24-bit data word in data memory or to 
+  a specific 32-bit instruction word in instruction memory. Each general register can 
+  contain a 24-bit. Only data memory can be loaded from or stored to.
+</p>
+
+<p>Here is an example diagram of instruction memory:</p>
+
+<table><thead>
+  <tr>
+    <td>ADDRESS</td>
+    <td>INSTRUCTION</td>
+  </tr>
+</thead><tbody>
+  <tr><td>0x000000:</td><td>0x6f300000</td></tr>
+  <tr><td>0x000001:</td><td>0x6f4003e8</td></tr>
+  <tr><td>...</td><td>...</td></tr>
+  <tr><td>0xfffffe:</td><td>0xef000004</td></tr>
+  <tr><td>0xffffff:</td><td>0xff000005</td></tr>
+</tbody></table>
+
+<p>And here is data memory:</p>
+
+<table><thead>
+  <tr>
+    <td>ADDRESS</td>
+    <td>DATA</td>
+  </tr>
+</thead><tbody>
+  <tr><td>0x000000:</td><td>0x5071fc</td></tr>
+  <tr><td>0x000001:</td><td>0x551492</td></tr>
+  <tr><td>...</td><td>...</td></tr>
+  <tr><td>0xfffffe:</td><td>0x786a9e</td></tr>
+  <tr><td>0xffffff:</td><td>0x67f952</td></tr>
+</tbody></table>
+
+
+
+  </div>
+
+  
+
+  <div class="sect">
+    <h2>Binary Encodings</h2>
+    
+<p>
+  There are 3 primary instruction types. The type of an instruction is simply defined 
+  as the number of arguments it takes.
+</p>
+<p>
+  All instructions are additionally encoded to take either a register or an immediate 
+  value for the argument <code class="reg">%RI</code>. Which encoding is used is given by the 24<sup>th</sup> 
+  bit, the IMM field. When IMM is unset with a value of 0, only the last 4 bits of the 
+  instruction are used for <code class="reg">%RI</code>, to designate a register.
+<p>
+
+<table><thead>
+  <tr>
+    <td>BITS</td>
+    <td colspan="1" class="b4">4</td>
+    <td colspan="1" class="b3">3</td>
+    <td colspan="1" class="b1">1</td>
+    <td colspan="1" class="b4">4</td>
+    <td colspan="1" class="b4">4</td>
+    <td colspan="1" class="b12">12</td>
+    <td colspan="1" class="b4">4</td>
+  </tr>
+</thead><tbody>
+  <tr>
+    <td class="head">A3-TYPE</td>
+    <td colspan="1" class="b4">OP</td>
+    <td colspan="1" class="b3"><code class="cmr">?CQ</code></td>
+    <td colspan="1" class="b1">IMM=0</td>
+    <td colspan="1" class="b4"><code class="reg">%RD</code></td>
+    <td colspan="1" class="b4"><code class="reg">%RS</code></td>
+    <td colspan="1" class="b12">-</td>
+    <td colspan="1" class="b4"><code class="reg">%RI</code></td>
+  </tr>
+  <tr>
+    <td class="head">A2-TYPE</td>
+    <td colspan="1" class="b4">OP</td>
+    <td colspan="1" class="b3"><code class="cmr">?CQ</code></td>
+    <td colspan="1" class="b1">IMM=0</td>
+    <td colspan="1" class="b4"><code class="reg">%RD</code></td>
+    <td colspan="2" class="b16">-</td>
+    <td colspan="1" class="b4"><code class="reg">%RI</code></td>
+  </tr>
+  <tr>
+    <td class="head">A1-TYPE</td>
+    <td colspan="1" class="b4">OP</td>
+    <td colspan="1" class="b3"><code class="cmr">?CQ</code></td>
+    <td colspan="1" class="b1">IMM=0</td>
+    <td colspan="3" class="b20">-</td>
+    <td colspan="1" class="b4"><code class="reg">%RI</code></td>
+  </tr>
+</tbody></table>
+<p>
+  When IMM is set to 1, the immediate value is instead used, and always sign extended
+  wherever possible into a 24-bit value.
+<p>
+<table><thead>
+    <td>BITS</td>
+    <td colspan="1" class="b4">4</td>
+    <td colspan="1" class="b3">3</td>
+    <td colspan="1" class="b1">1</td>
+    <td colspan="1" class="b4">4</td>
+    <td colspan="1" class="b4">4</td>
+    <td colspan="1" class="b16">16</td>
+</thead><tbody>
+  <tr>
+    <td class="head">A3-TYPE</td>
+    <td colspan="1" class="b4">OP</td>
+    <td colspan="1" class="b3"><code class="cmr">?CQ</code></td>
+    <td colspan="1" class="b1">IMM=1</td>
+    <td colspan="1" class="b4"><code class="reg">%RD</code></td>
+    <td colspan="1" class="b4"><code class="reg">%RS</code></td>
+    <td colspan="1" class="b16"><code class="reg">%RI</code> (imm)</td>
+  </tr>
+  <tr>
+    <td class="head">A2-TYPE</td>
+    <td colspan="1" class="b4">OP</td>
+    <td colspan="1" class="b3"><code class="cmr">?CQ</code></td>
+    <td colspan="1" class="b1">IMM=1</td>
+    <td colspan="1" class="b4"><code class="reg">%RD</code></td>
+    <td colspan="2" class="b20"><code class="reg">%RI</code> (imm)</td>
+  </tr>
+  <tr>
+    <td class="head">A1-TYPE</td>
+    <td colspan="1" class="b4">OP</td>
+    <td colspan="1" class="b3"><code class="cmr">?CQ</code></td>
+    <td colspan="1" class="b1">IMM=1</td>
+    <td colspan="3" class="b24"><code class="reg">%RI</code> (imm)</td>
+  </tr>
+</tbody></table>  
+</p>
+<p>
+  The reason for having 3 different encodings is to use as many bits as possible for the 
+  immediate fields. In particular, any A1-TYPE instruction can reference an entire 24-bit 
+  instruction address or 24-bit data address using just its immediate field.
+</p>
+<p>
+  The purpose of the <code class="cmr">?CQ</code> field in each instruction is explained later.
+</p>
+
+  </div>
+
+
+
+
+  <div class="sect">
+    <h2>Instruction Set</h2>
+
+
+<p>
+  Every instruction takes a form such as the following. Some instructions omit 
+  <code class="reg">%RS</code>, some omit <code class="reg">%RD</code>, and any 
+  instruction can optionally omit <code class="cmr">?CQ</code>.
+</p>
+
+<pre class="code"><code class="int">NAME</code> <code class="cmr">?CQ</code> <code class="reg">%RD</code> <code class="reg">%RS</code> <code class="reg">%RI</code></pre>
+
+<p>The following is the complete instruction set:</p>
+    
+<p>
+<table><thead>
+	<tr><td>OP</td><td>INST</td><td>TYPE</td><td>FUNCTION</td><td>NOTE</td></tr>
+</thead><tbody>
+  <tr><td class="or"></td><td><code class="int">SLL</code></td><td>A3-TYPE</td><td><code class="reg">%RD</code> &larr; <code class="reg">%RS</code> &lt;&lt; <code class="reg">%RI</code></td><td>Shift logical left</td></tr> <tr><td class="or"></td><td><code class="int">SLR</code></td><td>A3-TYPE</td><td><code class="reg">%RD</code> &larr; <code class="reg">%RS</code> &gt;&gt; <code class="reg">%RI</code></td><td>Shift logical right</td></tr> <tr><td class="or"></td><td><code class="int">SAR</code></td><td>A3-TYPE</td><td><code class="reg">%RD</code> &larr; <code class="reg">%RS</code> &gt;&gt; <code class="reg">%RI</code></td><td>Shift arithmetic right</td></tr> <tr><td class="or"></td><td><code class="int">RTL</code></td><td>A3-TYPE</td><td><code class="reg">%RD</code> &larr; <code class="reg">%RS</code> &#8634; <code class="reg">%RI</code></td><td>Rotate left</td></tr> <tr><td class="or"></td><td><code class="int">RTR</code></td><td>A3-TYPE</td><td><code class="reg">%RD</code> &larr; <code class="reg">%RS</code> &#8635; <code class="reg">%RI</code></td><td>Rotate right</td></tr> <tr><td class="or"></td><td><code class="int">AND</code></td><td>A3-TYPE</td><td><code class="reg">%RD</code> &larr; <code class="reg">%RS</code> & <code class="reg">%RI</code></td><td>And</td></tr> <tr><td class="or"></td><td><code class="int">IOR</code></td><td>A3-TYPE</td><td><code class="reg">%RD</code> &larr; <code class="reg">%RS</code> | <code class="reg">%RI</code></td><td>Inclusive or</td></tr> <tr><td class="or"></td><td><code class="int">XOR</code></td><td>A3-TYPE</td><td><code class="reg">%RD</code> &larr; <code class="reg">%RS</code> ^ <code class="reg">%RI</code></td><td>Exclusive or</td></tr>
+  <tr><td class="or"></td><td><code class="int">ADD</code></td><td>A3-TYPE</td><td><code class="reg">%RD</code> &larr; <code class="reg">%RS</code> + <code class="reg">%RI</code></td><td>Addition</td></tr> <tr><td class="or"></td><td><code class="int">SUB</code></td><td>A3-TYPE</td><td><code class="reg">%RD</code> &larr; <code class="reg">%RS</code> - <code class="reg">%RI</code></td><td>Subtraction</td></tr> <tr><td class="or"></td><td><code class="int">LOAD</code></td><td>A3-TYPE</td><td><code class="reg">%RD</code> &larr; MEM(<code class="reg">%RS</code> + <code class="reg">%RI</code>)</td><td>Load word from memory</td></tr> <tr><td class="or"></td><td><code class="int">SAVE</code></td><td>A3-TYPE</td><td>MEM(<code class="reg">%RS</code> + <code class="reg">%RI</code>) &larr; <code class="reg">%RD</code></td><td>Store word to memory</td></tr> <tr><td class="or"></td><td><code class="int">CMPS</code></td><td>A2-TYPE</td><td><code class="reg">%cr</code> &larr; <code class="reg">%RD</code> ? <code class="reg">%RI</code></td><td>Signed comparison</td></tr> <tr><td class="or"></td><td><code class="int">CMPU</code></td><td>A2-TYPE</td><td><code class="reg">%cr</code> &larr; <code class="reg">%RD</code> ? <code class="reg">%RI</code></td><td>Unsigned comparison</td></tr> <tr><td class="or"></td><td><code class="int">LINK</code></td><td>A1-TYPE</td><td><code class="reg">%ra</code> &larr; <code class="reg">%RI</code></td><td>Link to address</td></tr> <tr><td class="or"></td><td><code class="int">JUMP</code></td><td>A1-TYPE</td><td><code class="reg">%pc</code> &larr; <code class="reg">%RI</code></td><td>Jump to address</td></tr>
+</tbody></table>
+</p>
+<p>
+  Note that shift or rotate amounts greater than or equal to 24 are undefined, due to the 
+  fact that registers are constrained to 24-bit values.
+</p>
+<p>
+  After any instruction executes, the program counter advances by 1 (recall that 
+  24-bit instruction memory addresses each refer to a different 32-bit instruction). The 
+  only exception to this rule is the <code class="int">JUMP</code> instruction, in which the program counter is 
+  not incremented at all but instead is manually set.
+</p>
+<p>
+  It is worth pointing out that <code class="int">LINK</code> can set the entire contents of <code class="reg">%ra</code> to any 
+  arbitrary value, eliminating the main benefit of including branch instructions. This 
+  is particularly useful for loading the address given by a label or for loading a 
+  specific 24-bit immediate value.
+</p>
+<p>
+  Instructions have been designed to cover as many operations as possible. For example, 
+  computing not:
+</p>
+
+<pre class="code">nor $t0 $t1 $0 # MIPS
+  
+<code class="int">XOR</code> <code class="reg">%t0</code> <code class="reg">%t1</code> 0xffff # Ida</pre>
+
+
+
+
+  </div>
+
+
+
+
+
+
+
+
+
+  <div class="sect">
+    <h2>Comparison Queries</h2>
+    
+<p>
+  Every instruction can be conditionally executed depending on the current comparison
+  query by checking the most recent comparison stored in the comparison register <code class="reg">%cr</code>. 
+  If the query is false, the current instruction does not execute. For example:
+</p>
+
+<pre class="code"><code class="int">CMPS</code> <code class="reg">%zero</code> <code class="reg">%t5</code>
+<code class="int">ADD</code> <code class="cmr">?GT</code> <code class="reg">%t2</code> <code class="reg">%t3</code> <code class="reg">%zero</code></pre>
+
+<p>
+  This sets <code class="reg">%t2</code> to <code class="reg">%t3</code> only if <code class="reg">%t5</code> is negative. Otherwise, the operation does 
+  nothing. Every instruction has a default comparison query of <code class="cmr">?OK</code>, meaning that 
+  every instruction by default will execute unconditionally. 
+</p>
+<p>
+<table><thead>
+  <tr><td>NUMBER</td><td>NAME</td><td>COMPARISON</td></tr>
+</thead><tbody>	
+  <tr><td class="or"></td><td><code class="cmr">?NO</code></td><td>FALSE</td></tr> <tr><td class="or"></td><td><code class="cmr">?LE</code></td><td>A &le; B</td></tr> <tr><td class="or"></td><td><code class="cmr">?GT</code></td><td>A &gt; B</td></tr> <tr><td class="or"></td><td><code class="cmr">?NE</code></td><td>A &ne; B</td></tr>
+  <tr><td class="or"></td><td><code class="cmr">?EQ</code></td><td>A = B</td></tr> <tr><td class="or"></td><td><code class="cmr">?GE</code></td><td>A &ge; B</td></tr> <tr><td class="or"></td><td><code class="cmr">?LT</code></td><td>A &lt; B</td></tr> <tr><td class="or"></td><td><code class="cmr">?OK</code></td><td>TRUE</td></tr>
+</tbody></table>
+</p>
+<p>
+  Note that since the bits of <code class="reg">%cr</code> can never be directly accessed, Ida allows some 
+  flexibility in how <code class="reg">%cr</code> is implemented. When a program begins, before any comparisons 
+  have been computed, all comparisons except TRUE are assumed to be false.
+</p>
+
+  </div>
+
+
+
+
+  <div class="sect">
+    <h2>Registers</h2>
+    
+<p>
+  Ida uses 16 general-purpose registers, each containing a 24-bit value.
+</p>
+<p>
+<table><thead>
+  <tr><td>NUMBER</td><td>NAME</td><td>USAGE</td><td>NOTE</td></tr>
+</thead><tbody>
+  <tr><td class="or"></td><td><code class="reg">%zero</code></td><td>0 Value</td><td>Cannot be overwritten</td></tr> <tr><td class="or"></td><td><code class="reg">%rv</code></td><td>Return Value</td><td></td></tr> <tr><td class="or"></td><td><code class="reg">%ra</code></td><td>Return Address</td><td></td></tr> <tr><td class="or"></td><td><code class="reg">%a0</code></td><td>Argument 0</td><td></td></tr> <tr><td class="or"></td><td><code class="reg">%a1</code></td><td>Argument 1</td><td></td></tr> <tr><td class="or"></td><td><code class="reg">%a2</code></td><td>Argument 2</td><td></td></tr> <tr><td class="or"></td><td><code class="reg">%t0</code></td><td>Temporary 0</td><td></td></tr> <tr><td class="or"></td><td><code class="reg">%t1</code></td><td>Temporary 1</td><td></td></tr> 
+  <tr><td class="or"></td><td><code class="reg">%t2</code></td><td>Temporary 2</td><td></td></tr> <tr><td class="or"></td><td><code class="reg">%t3</code></td><td>Temporary 3</td><td></td></tr> <tr><td class="or"></td><td><code class="reg">%t4</code></td><td>Temporary 4</td><td></td></tr> <tr><td class="or"></td><td><code class="reg">%t5</code></td><td>Temporary 5</td><td></td></tr> <tr><td class="or"></td><td><code class="reg">%s0</code></td><td>Saved Temporary 0</td><td>Must be preserved across calls</td></tr> <tr><td class="or"></td><td><code class="reg">%s1</code></td><td>Saved Temporary 1</td><td>Must be preserved across calls</td></tr> <tr><td class="or"></td><td><code class="reg">%s2</code></td><td>Saved Temporary 2</td><td>Must be preserved across calls</td></tr> <tr><td class="or"></td><td><code class="reg">%sp</code></td><td>Stack Pointer</td><td></td></tr>  
+</tbody></table>
+</p>
+<p>
+  There are also a few special-purpose registers, none of which can be directly accessed.
+</p>
+<p>
+<table><thead>
+  <tr><td>NAME</td><td>USAGE</td><td>NOTE</td></tr>
+</thead><tbody>
+  <tr><td><code class="reg">%cr</code></td><td>Comparison Result</td><td>Bit-width is implementation-dependent</td></tr>
+  <tr><td><code class="reg">%pc</code></td><td>Program Counter</td><td>24-bit current instruction address</td></tr>  
+</tbody></table>
+</p>
+<p>
+  When a program begins, all registers have a value of 0.
+</p>
+
+  </div>
+
+
+
+
+
+  <div class="sect">
+    <h2>Assembly Details</h2>
+    
+<p>
+  Ida is entirely case-insensitive. Spaces or commas can be used to delimit 
+  instruction arguments comments begin with the number sign and continue to the end of 
+  their line. Labels directly reference 24-bit instruction addresses. They 
+  can be used to refer to any line, and they can be referenced inside of any A1-TYPE 
+  instruction. Label references inside instructions must begin with an at symbol. In 
+  general, labels can use any character that is not a comment, space, or comma character.
+</p>
+
+<pre class="code">FOO:
+BAR BAT: <code class="int">SLR</code> <code class="reg">%t0</code> <code class="reg">%t0</code> <code class="reg">%t0</code> # FOO, BAR, and BAT all refer to this address
+         <code class="int">LINK</code> @RET # sets the return address to address RET
+         <code class="int">JUMP</code> @BAZ # jump to address BAZ
+RET:     ...
+     
+BAZ:     ...</pre>
+
+
+<p>
+  A few pseudo-instructions are supported, most importantly the jump-and-link equivalent 
+  <code class="int">CALL</code>. Note that all of these pseudo-instructions are only circumstantially efficient.
+</p>
+
+<p>
+<table><thead>
+	<tr><td>INST</td><td>GENERATES</td><td>NOTE</td></tr>
+</thead><tbody>
+  <tr><td><code class="int">HALT</code> <code class="cmr">?CQ</code></td><td><pre class="code">R: <code class="int">JUMP</code> <code class="cmr">?CQ</code> @R</pre></td><td>Halt program (by putting it in an infinite loop)</td></tr> <tr><td><code class="int">CALL</code> <code class="cmr">?CQ</code> <code class="reg">%RI</code></td><td><pre class="code">   <code class="int">LINK</code> <code class="cmr">?CQ</code> @R
+   <code class="int">JUMP</code> <code class="cmr">?CQ</code> <code class="reg">%RI</code>
+R: ...</pre></td><td>Jump and link</td></tr> <tr><td><code class="int">RTRN</code> <code class="cmr">?CQ</code> <code class="reg">%RI</code></td><td><pre class="code"><code class="int">IOR</code> <code class="cmr">?CQ</code> <code class="reg">%rv</code> <code class="reg">%zero</code> <code class="reg">%RI</code>
+<code class="int">JUMP</code> <code class="cmr">?CQ</code> <code class="reg">%ra</code>
+</pre></td><td>Return value</td></tr> <tr><td><code class="int">PUSH</code> <code class="cmr">?CQ</code> <code class="reg">%RD</code></td><td><pre class="code"><code class="int">ADD</code> <code class="cmr">?CQ</code> <code class="reg">%sp</code> <code class="reg">%sp</code> -1
+<code class="int">SAVE</code> <code class="cmr">?CQ</code> <code class="reg">%RD</code> <code class="reg">%sp</code> <code class="reg">%zero</code>
+</pre></td><td>Push to stack</td></tr> <tr><td><code class="int">PEEK</code> <code class="cmr">?CQ</code> <code class="reg">%RD</code></td><td><pre class="code"><code class="int">LOAD</code> <code class="cmr">?CQ</code> <code class="reg">%RD</code> <code class="reg">%sp</code> <code class="reg">%zero</code></pre></td><td>Peek from stack</td></tr> <tr><td><code class="int">POP</code> <code class="cmr">?CQ</code> <code class="reg">%RD</code></td><td><pre class="code"><code class="int">LOAD</code> <code class="cmr">?CQ</code> <code class="reg">%RD</code> <code class="reg">%sp</code> <code class="reg">%zero</code>
+<code class="int">ADD</code> <code class="cmr">?CQ</code> <code class="reg">%sp</code> <code class="reg">%sp</code> 1
+</pre></td><td>Pop from stack</td></tr> <tr><td><code class="int">COPY</code> <code class="cmr">?CQ</code> <code class="reg">%RD</code> <code class="reg">%RI</code></td><td><pre class="code"><code class="int">IOR</code> <code class="cmr">?CQ</code> <code class="reg">%RD</code> <code class="reg">%zero</code> <code class="reg">%RI</code></pre></td><td>Copy value</td></tr>
+</tbody></table>
+</p>
+
+<p>
+  The assembler has support for binary (0b...), octal (0c...), hex (0x...), 
+  and base 10 constants, both positive and negative. Numeric comparison queries 
+  (<code class="cmr">?07</code>) and registers (<code class="reg">%07</code>) are also supported. For all instruction 
+  arguments, the assembler will abort if the number is too large to fit in its slot.
+</p>
+
+
+<p>The provided assembler jar simply takes in a list of files to assemble and outputs 
+hex files. As an example, this assembles a given Ida files:</p>
+
+<pre class="code input">java -jar Ida.jar program.ida</pre>
+
+<p>The assembler also has a simple emulator that can execute assembled Ida files. 
+It will execute the given assembled program hex file, optionally using the given memory hex 
+file. Note that program hex files can be assembled by the assembler, and memory hex files 
+can be created by editing a memory module in logisim and then exporting it.</p>
+
+<p>The emulator will only exit in one of two conditions: first if execution passes the 
+final instruction in the assembled hex file, and second if a jump-to-itself style loop 
+occurs (such as the result of the <code class="int">HALT</code> pseudo-instruction). Upon exiting, the values 
+of all the registers are printed, and the contents of the data memory are dumped to a 
+file. As an example, this executes the given program:</p>
+
+<pre class="code input">java -jar Ida.jar -exec program.hex data.hex</pre>
+
+
+  </div>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+</div>
+  </body>
+
+<!-- Mirrored from www-inst.eecs.berkeley.edu/~cs61c/sp14/projs/04/manual.html by HTTrack Website Copier/3.x [XR&CO'2014], Tue, 17 Mar 2015 00:03:57 GMT -->
+</html>
